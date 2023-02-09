@@ -1,0 +1,5 @@
+# Make sure that all url in this file is relative
+#
+#   See https://docs.gitlab.com/ee/ci/git_submodules.html#configure-the-gitmodules-file
+#   See https://tulrfsd.pages.gitlab.lrz.de/common/documentation/fsd/dev-process/ci-setup#troubleshoot
+#
