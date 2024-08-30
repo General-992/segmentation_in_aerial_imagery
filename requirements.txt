@@ -1,0 +1,8 @@
+fcn>=6.1.5
+numpy
+Pillow
+pytz
+scipy
+torch>=0.2.0
+torchvision>=0.1.8
+tqdm
