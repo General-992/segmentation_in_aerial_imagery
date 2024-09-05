@@ -61,15 +61,14 @@ class FLAIRSegBase(data.Dataset):
         if self._transform:
             img, mask = self.transform(img, mask)
 
+            img = torch.from_numpy(img).float()
+            mask = torch.from_numpy(mask).long()
 
-        img = torch.from_numpy(img).float()
-        mask = torch.from_numpy(mask).long()
-
-        if self.patch_size:
-            if not self.test:
-                img, mask = scripts.utils.patch_sample(img=img, mask=mask, patch_size=self.patch_size)
-            else:
-                img, mask = scripts.utils.patch_divide(img=img, mask=mask, patch_size=self.patch_size)
+            if self.patch_size:
+                if not self.test:
+                    img, mask = scripts.utils.patch_sample(img=img, mask=mask, patch_size=self.patch_size)
+                else:
+                    img, mask = scripts.utils.patch_divide(img=img, mask=mask, patch_size=self.patch_size)
         return img, mask
     def transform(self, img, mask):
         aug = self.transforms(image=img, mask=mask)

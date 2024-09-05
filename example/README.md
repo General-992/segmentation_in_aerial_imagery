@@ -7,10 +7,9 @@
 ```bash
 ./download_dataset.sh
 
-./train_fcn32s.py -g 0
-./train_fcn16s.py -g 0
-./train_fcn8s.py -g 0
-./train_fcn8s_atonce.py -g 0
+
+ python -m example.train -g 0
+./train_fcn32s.py -g 0 
 
 ./view_log logs/XXX/log.csv
 ```

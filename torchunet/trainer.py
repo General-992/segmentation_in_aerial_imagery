@@ -15,7 +15,8 @@ import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 import tqdm
 
-import torchfcn
+import torchunet
+import scripts
 
 
 def cross_entropy2d(input, target, weight=None, size_average=True):
@@ -113,6 +114,7 @@ class Trainer(object):
             data, target = Variable(data), Variable(target)
 
             with torch.no_grad():
+                torch.cuda.empty_cache()
                 score = self.model(data)
 
             loss = self.loss(score, target)
@@ -137,18 +139,18 @@ class Trainer(object):
                         lbl_pred=lp, lbl_true=lt, img=img, n_class=n_class)
                     visualizations.append(viz)
 
-        metrics = torchfcn.utils.label_accuracy_score(
+        metrics = scripts.utils.label_accuracy_score(
             label_trues, label_preds, n_class)
 
         out = osp.join(self.out, 'visualization_viz')
         if not osp.exists(out):
             os.makedirs(out)
-        out_file = osp.join(out, 'iter%012d.jpg' % self.iteration)
+        out_file = osp.join(out, 'epoch%08d.jpg' % self.epoch)
         skimage.io.imsave(out_file, fcn.utils.get_tile_image(visualizations))
 
         val_loss /= len(self.val_loader)
 
-        with open(osp.join(self.out, 'log.csv'), 'a') as f:
+        with open(osp.join(self.out, 'epoch%log.csv' % self.epoch), 'a') as f:
             elapsed_time = (
                 datetime.datetime.now(pytz.timezone('Europe/Berlin')) -
                 self.timestamp_start).total_seconds()
@@ -173,7 +175,7 @@ class Trainer(object):
         if is_best:
             shutil.copy(osp.join(self.out, 'checkpoint.pth.tar'),
                         osp.join(self.out, 'model_best.pth.tar'))
-        torch.cuda.empty_cache()
+
         if training:
             self.model.train()
 
@@ -206,7 +208,10 @@ class Trainer(object):
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data), Variable(target)
+
             self.optim.zero_grad()
+            torch.cuda.empty_cache()
+
             score = self.model(data)
 
             loss = self.loss(score, target)
@@ -221,7 +226,7 @@ class Trainer(object):
             lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
             lbl_true = target.data.cpu().numpy()
             acc, acc_cls, mean_iu, fwavacc = \
-                torchfcn.utils.label_accuracy_score(
+                scripts.utils.label_accuracy_score(
                     lbl_true, lbl_pred, n_class=n_class)
             metrics.append((acc, acc_cls, mean_iu, fwavacc))
             metrics = np.mean(metrics, axis=0)

@@ -8,7 +8,7 @@ import subprocess
 import torch
 import yaml
 
-import torchfcn
+import torchunet
 
 
 def git_hash():
@@ -32,12 +32,15 @@ def main():
     )
     parser.add_argument('-g', '--gpu', type=int, required=True, help='gpu id')
     parser.add_argument('--resume', help='checkpoint path')
+    parser.add_argument(
+        '--model', type=str, default='unetplusplus', help='batch size',
+    )
 
     parser.add_argument(
         '--max-epoch', type=int, default=500, help='max epoch'
     )
     parser.add_argument(
-        '--lr', type=float, default=1.0e-10, help='learning rate',
+        '--max-lr', type=float, default=1.0e-3, help='learning rate',
     )
     parser.add_argument(
         '--weight-decay', type=float, default=0.0005, help='weight decay',
@@ -46,15 +49,14 @@ def main():
         '--momentum', type=float, default=0.99, help='momentum',
     )
     parser.add_argument(
-        '--batch-size', type=int, default=32, help='batch size',
+        '--batch-size', type=int, default=24, help='batch size',
     )
 
     args = parser.parse_args()
-    args.model = 'UnetResnet50'
     args.git_hash = git_hash()
 
     now = datetime.datetime.now()
-    args.out = osp.join(here, 'logs', now.strftime('%Y_%m_%d.%H_%M'))
+    args.out = osp.join(here, 'logs', f'{args.model}_{now.strftime("%Y_%m_%d.%H_%M")}')
 
     os.makedirs(args.out)
     with open(osp.join(args.out, 'config.yaml'), 'w') as f:
@@ -72,16 +74,22 @@ def main():
     kwargs = {'num_workers': 4, 'pin_memory': True, 'prefetch_factor': 2} if cuda else {}
 
     train_loader = torch.utils.data.DataLoader(
-        torchfcn.datasets.FLAIRSegBase(root, split='train', transform=True),
+        torchunet.datasets.FLAIRSegBase(root, split='train', transform=True),
         batch_size=args.batch_size, shuffle=True, **kwargs)
 
     val_loader = torch.utils.data.DataLoader(
-        torchfcn.datasets.FLAIRSegBase(root, split='val', transform=True),
+        torchunet.datasets.FLAIRSegBase(root, split='val', transform=True),
         batch_size=args.batch_size, shuffle=False, **kwargs)
 
     # 2. model
+    if args.model.lower() == 'unetplusplus':
+        # num of trainable params = 48.986.615
+        model = torchunet.models.UnetPlusPlus(n_class=7)
 
-    model = torchfcn.models.UnetResnet50(n_class=7)
+    if args.model.lower() == 'deeplabv3plus':
+        #  num of trainable params = 39.758.247
+        model = torchunet.models.DeepLabV3Plus.Deeplabv3plus_resnet(n_class=7)
+
     start_epoch = 0
     start_iteration = 0
     if args.resume:
@@ -102,11 +110,13 @@ def main():
     #     lr=args.lr,
     #     momentum=args.momentum,
     #     weight_decay=args.weight_decay)
-    optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+
+    # the range of lr for a Adamw is 1e-3 while for SGD is 1e-10 x_x
+    optim = torch.optim.AdamW(model.parameters(), lr=args.max_lr, weight_decay=args.weight_decay)
     if args.resume:
         optim.load_state_dict(checkpoint['optim_state_dict'])
 
-    trainer = torchfcn.Trainer(
+    trainer = torchunet.Trainer(
         cuda=cuda,
         model=model,
         optimizer=optim,
