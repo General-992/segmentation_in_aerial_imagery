@@ -112,20 +112,50 @@ class ASPPConv(nn.Sequential):
         ]
         super(ASPPConv, self).__init__(*modules)
 
+## Broken
+# class ASPPPooling(nn.Sequential):
+#     def __init__(self, in_channels, out_channels):
+#         super(ASPPPooling, self).__init__(
+#             nn.AdaptiveAvgPool2d(1),
+#             nn.Conv2d(in_channels, out_channels, 1, bias=False),
+#             nn.BatchNorm2d(out_channels),
+#             nn.ReLU(inplace=True))
+#
+#     def forward(self, x):
+#         size = x.shape[-2:]
+#         x = super(ASPPPooling, self).forward(x)
+#         return F.interpolate(x, size=size, mode='bilinear', align_corners=False)
 
-class ASPPPooling(nn.Sequential):
+class ASPPPooling(nn.Module):
+    """
+    ASPP Pooling  with the correction for a batch size = 1
+    for it caused a crash with BatchNorm for a batch size = 1
+    """
     def __init__(self, in_channels, out_channels):
-        super(ASPPPooling, self).__init__(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(in_channels, out_channels, 1, bias=False),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True))
+        super(ASPPPooling, self).__init__()
+        # Define each layer and assign it to self.layer_name
+        self.adaptive_avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv = nn.Conv2d(in_channels, out_channels, 1, bias=False)
+        self.bn = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
+        # Check if batch size is 1
+        if x.size(0) == 1:
+            # If batch size is 1, switch to eval mode
+            self.eval()
+        # Save the original spatial size for later interpolation
         size = x.shape[-2:]
-        x = super(ASPPPooling, self).forward(x)
-        return F.interpolate(x, size=size, mode='bilinear', align_corners=False)
-
+        # Pass the input through each layer
+        x = self.adaptive_avg_pool(x)
+        x = self.conv(x)
+        x = self.bn(x)
+        x = self.relu(x)
+        # Interpolate back to the original size
+        output = F.interpolate(x, size=size, mode='bilinear', align_corners=False)
+        if x.size(0) == 1:
+            self.train()
+        return output
 
 class ASPP(nn.Module):
     def __init__(self, in_channels, atrous_rates):
@@ -141,6 +171,7 @@ class ASPP(nn.Module):
         modules.append(ASPPConv(in_channels, out_channels, rate1))
         modules.append(ASPPConv(in_channels, out_channels, rate2))
         modules.append(ASPPConv(in_channels, out_channels, rate3))
+
         modules.append(ASPPPooling(in_channels, out_channels))
 
         self.convs = nn.ModuleList(modules)
@@ -149,7 +180,7 @@ class ASPP(nn.Module):
             nn.Conv2d(5 * out_channels, out_channels, 1, bias=False),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.1), )
+            nn.Dropout(0.1) )
 
     def forward(self, x):
         res = []

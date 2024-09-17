@@ -14,7 +14,7 @@ def UnetPlusPlus(n_class: int):
     # Ensure that gradients are on
     for param in model.parameters():
         param.requires_grad = True
-
+    model.train()
     return model
 
 

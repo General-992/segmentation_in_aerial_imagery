@@ -31,13 +31,10 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument('-g', '--gpu', type=int, required=True, help='gpu id')
+    parser.add_argument('-model', type=str, help='model name')
     parser.add_argument('--resume', help='checkpoint path')
     parser.add_argument(
-        '--model', type=str, default='unetplusplus', help='batch size',
-    )
-
-    parser.add_argument(
-        '--max-epoch', type=int, default=500, help='max epoch'
+        '--max-epoch', type=int, default=100, help='max epoch'
     )
     parser.add_argument(
         '--max-lr', type=float, default=1.0e-3, help='learning rate',
@@ -84,15 +81,24 @@ def main():
     # 2. model
     if args.model.lower() == 'unetplusplus':
         # num of trainable params = 48.986.615
+        print('Start training Unet')
         model = torchunet.models.UnetPlusPlus(n_class=7)
-
-    if args.model.lower() == 'deeplabv3plus':
+    elif args.model.lower() == 'deeplab':
         #  num of trainable params = 39.758.247
+        print('Start training Deeplab')
         model = torchunet.models.DeepLabV3Plus.Deeplabv3plus_resnet(n_class=7)
+    elif args.model.lower() == 'segnet':
+        print('Start training Segnet')
+        # num of trainable params = 12.932.295
+        model = torchunet.models.SegNet(num_classes=7)
+        print(sum(p.numel() for p in model.parameters() if p.requires_grad))
+    else:
+        raise Exception('Unknown model')
 
     start_epoch = 0
     start_iteration = 0
     if args.resume:
+        print(f'Resuming from: {args.resume}')
         checkpoint = torch.load(args.resume)
         model.load_state_dict(checkpoint['model_state_dict'])
         start_epoch = checkpoint['epoch']

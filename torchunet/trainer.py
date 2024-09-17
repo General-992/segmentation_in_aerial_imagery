@@ -115,7 +115,9 @@ class Trainer(object):
 
             with torch.no_grad():
                 torch.cuda.empty_cache()
+
                 score = self.model(data)
+
 
             loss = self.loss(score, target)
             loss_data = loss.data.item()
@@ -145,12 +147,12 @@ class Trainer(object):
         out = osp.join(self.out, 'visualization_viz')
         if not osp.exists(out):
             os.makedirs(out)
-        out_file = osp.join(out, 'epoch%08d.jpg' % self.epoch)
+        out_file = osp.join(out, 'epoch%04d.jpg' % self.epoch)
         skimage.io.imsave(out_file, fcn.utils.get_tile_image(visualizations))
 
         val_loss /= len(self.val_loader)
-
-        with open(osp.join(self.out, 'epoch%log.csv' % self.epoch), 'a') as f:
+        # osp.join(self.out, 'epoch%log.csv' % self.epoch)
+        with open(osp.join(self.out, 'log.csv'), 'a') as f:
             elapsed_time = (
                 datetime.datetime.now(pytz.timezone('Europe/Berlin')) -
                 self.timestamp_start).total_seconds()
@@ -212,7 +214,13 @@ class Trainer(object):
             self.optim.zero_grad()
             torch.cuda.empty_cache()
 
-            score = self.model(data)
+
+            try:
+                score = self.model(data)
+            except Exception as e:
+                print(f"Error during forward pass: {e}")
+                print(f"Shape of input data: {data.shape}")
+
 
             loss = self.loss(score, target)
             loss /= len(data)
