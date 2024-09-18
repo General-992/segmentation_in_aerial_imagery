@@ -15,7 +15,7 @@ import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 import tqdm
 
-import torchunet
+import torchconvs
 import scripts
 
 

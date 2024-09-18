@@ -113,3 +113,21 @@ class FLAIRSegBase(data.Dataset):
         for old_class, new_class in class_mapping.items():
             new_mask[mask == old_class] = new_class
         return new_mask
+
+class OriginalSize(FLAIRSegBase):
+    def __init__(self, root, split, transform=False, patch_size=None, test=False):
+        super().__init__(root, split, transform, patch_size, test)
+
+    def __getitem__(self, idx):
+        img = tiff.imread(self.files[idx]['img'])
+        img = img[..., :3]
+        mask = Image.open(self.files[idx]['msk'])
+        mask = np.asarray(mask)
+        mask = self.mask_encode(mask)
+
+        if self._transform:
+            img, mask = self.transform(img, mask)
+            img = torch.from_numpy(img).float()
+            mask = torch.from_numpy(mask).long()
+
+        return img, mask

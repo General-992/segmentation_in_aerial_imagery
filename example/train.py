@@ -8,7 +8,7 @@ import subprocess
 import torch
 import yaml
 
-import torchunet
+import torchconvs
 
 
 def git_hash():
@@ -71,26 +71,26 @@ def main():
     kwargs = {'num_workers': 4, 'pin_memory': True, 'prefetch_factor': 2} if cuda else {}
 
     train_loader = torch.utils.data.DataLoader(
-        torchunet.datasets.FLAIRSegBase(root, split='train', transform=True),
+        torchconvs.datasets.FLAIRSegBase(root, split='train', transform=True),
         batch_size=args.batch_size, shuffle=True, **kwargs)
 
     val_loader = torch.utils.data.DataLoader(
-        torchunet.datasets.FLAIRSegBase(root, split='val', transform=True),
+        torchconvs.datasets.FLAIRSegBase(root, split='val', transform=True),
         batch_size=args.batch_size, shuffle=False, **kwargs)
 
     # 2. model
     if args.model.lower() == 'unetplusplus':
         # num of trainable params = 48.986.615
         print('Start training Unet')
-        model = torchunet.models.UnetPlusPlus(n_class=7)
+        model = torchconvs.models.UnetPlusPlus(n_class=7)
     elif args.model.lower() == 'deeplab':
         #  num of trainable params = 39.758.247
         print('Start training Deeplab')
-        model = torchunet.models.DeepLabV3Plus.Deeplabv3plus_resnet(n_class=7)
+        model = torchconvs.models.DeepLabV3Plus.Deeplabv3plus_resnet(n_class=7)
     elif args.model.lower() == 'segnet':
         print('Start training Segnet')
         # num of trainable params = 12.932.295
-        model = torchunet.models.SegNet(num_classes=7)
+        model = torchconvs.models.SegNet(num_classes=7)
         print(sum(p.numel() for p in model.parameters() if p.requires_grad))
     else:
         raise Exception('Unknown model')
@@ -122,7 +122,7 @@ def main():
     if args.resume:
         optim.load_state_dict(checkpoint['optim_state_dict'])
 
-    trainer = torchunet.Trainer(
+    trainer = torchconvs.Trainer(
         cuda=cuda,
         model=model,
         optimizer=optim,
