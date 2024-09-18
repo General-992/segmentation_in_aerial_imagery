@@ -10,7 +10,7 @@ import numpy as np
 import pytz
 import skimage.io
 import torch
-from torch.autograd import Variable
+
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 import tqdm
@@ -209,7 +209,7 @@ class Trainer(object):
 
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
-            data, target = Variable(data), Variable(target)
+            data, target = data, target
 
             self.optim.zero_grad()
             torch.cuda.empty_cache()
