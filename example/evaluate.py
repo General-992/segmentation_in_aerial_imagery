@@ -8,7 +8,7 @@ import fcn
 import numpy as np
 import skimage.io
 import torch
-from torch.autograd import Variable
+
 import torchconvs
 import tqdm
 
@@ -53,7 +53,7 @@ def main():
         model.load_state_dict(model_data['model_state_dict'])
     model.eval()
 
-    print('==> Evaluating with VOC2011ClassSeg seg11valid')
+    print('==> Evaluating %s' % model.__class__.__name__)
     visualizations = []
     label_trues, label_preds = [], []
     for batch_idx, (data, target) in tqdm.tqdm(enumerate(val_loader),
@@ -61,13 +61,14 @@ def main():
                                                ncols=80, leave=False):
         if torch.cuda.is_available():
             data, target = data.cuda(), target.cuda()
-        data, target = Variable(data, volatile=True), Variable(target)
+
         with torch.no_grad():
             score = model(data)
 
-        imgs = data.data.cpu()
-        lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
-        lbl_true = target.data.cpu()
+        # Safely detach from the computation graph and move to CPU
+        imgs = data.detach().cpu()
+        lbl_pred = score.detach().max(1)[1].cpu().numpy()[:, :, :]
+        lbl_true = target.detach().cpu()
         for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
             img, lt = val_loader.dataset.untransform(img, lt)
             label_trues.append(lt)

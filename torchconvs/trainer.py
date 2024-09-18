@@ -111,7 +111,7 @@ class Trainer(object):
                 leave=True, dynamic_ncols=True, mininterval=4):
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
-            data, target = Variable(data), Variable(target)
+            data, target = data, target
 
             with torch.no_grad():
                 torch.cuda.empty_cache()
