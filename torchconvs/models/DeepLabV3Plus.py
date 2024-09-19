@@ -19,7 +19,7 @@ def Deeplabv3plus_resnet(n_class, pretrained_backbone=True):
 
     backbone = intermediate_layer_getter.IntermediateLayerGetter(backbone, return_layers=return_layers)
 
-    model = deeplab._SimpleSegmentationModel(backbone, classifier)
+    model = deeplab.Deep_SimpleSegmentationModel(backbone, classifier)
 
     for param in model.parameters():
         param.requires_grad = True

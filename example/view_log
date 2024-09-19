@@ -35,14 +35,8 @@ def main():
     pd.set_option('display.width', 200)
     pd.set_option('display.float_format', lambda x: '%.3f' % x)
     try:
-        ext = osp.splitext(log_file)[-1]
-        if ext == '.json':
-            df = pd.read_json(log_file)
-        elif ext == '.csv':
-            df = pd.read_csv(log_file)
-        else:
-            print('Unsupported file extension: {}'.format(log_file))
-            sys.exit(1)
+
+        df = pd.read_csv(log_file)
         df = df.set_index(['epoch', 'iteration'])
 
         train_cols, valid_cols, else_cols = [], [], []
@@ -55,7 +49,8 @@ def main():
                 else_cols.append(col)
 
         if args.all:
-            print(df.to_string())
+            df_first_per_epoch = df.groupby(level='epoch').first()
+            print(df_first_per_epoch.to_string())
             return  # Exit after printing all data
 
         width = len('  '.join(['epoch', 'iteration']) + '  '.join(train_cols + else_cols) + '   ')
@@ -90,7 +85,7 @@ def main():
                 df_valid = df[valid_cols + else_cols].dropna()
             if not df_valid.empty:
                 print_bar('valid', width=width)
-                print(df_valid.tail(n=3))
+                print(df_valid.tail(n=5))
                 print()
 
                 for col in valid_cols:

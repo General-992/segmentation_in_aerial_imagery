@@ -104,7 +104,7 @@ class Trainer(object):
 
         val_loss = 0
         visualizations = []
-        label_trues, label_preds = [], []
+        metrics = []
         for batch_idx, (data, target) in tqdm.tqdm(
                 enumerate(self.val_loader), total=len(self.val_loader),
                 desc='Validation',
@@ -127,22 +127,21 @@ class Trainer(object):
 
             val_loss += loss_data / len(data)
 
-            if len(visualizations) < 9:
-                imgs = data.data.cpu()
-                lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
-                lbl_true = target.data.cpu()
-                for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
-                    img, lt = self.val_loader.dataset.untransform(img, lt)
-                    label_trues.append(lt)
-                    label_preds.append(lp)
 
+            imgs = data.data.cpu()
+            lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
+            lbl_true = target.data.cpu()
+            for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
+                img, lt = self.val_loader.dataset.untransform(img, lt)
 
+                acc, acc_cls, mean_iu, fwavacc = scripts.utils.label_accuracy_score(
+                        label_trues=lt, label_preds=lp, n_class=n_class)
+                metrics.append((acc, acc_cls, mean_iu, fwavacc))
+                if len(visualizations) < 9:
                     viz = fcn.utils.visualize_segmentation(
                         lbl_pred=lp, lbl_true=lt, img=img, n_class=n_class)
                     visualizations.append(viz)
-
-        metrics = scripts.utils.label_accuracy_score(
-            label_trues, label_preds, n_class)
+        metrics = np.mean(metrics, axis=0)
 
         out = osp.join(self.out, 'visualization_viz')
         if not osp.exists(out):
@@ -178,8 +177,8 @@ class Trainer(object):
             shutil.copy(osp.join(self.out, 'checkpoint.pth.tar'),
                         osp.join(self.out, 'model_best.pth.tar'))
 
-        if training:
-            self.model.train()
+            if training:
+                self.model.train()
 
 
     def train_epoch(self):

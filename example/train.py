@@ -88,7 +88,7 @@ def main():
     elif args.model.lower() == 'segnet':
         print('Start training Segnet')
         # num of trainable params = 12.932.295
-        model = torchconvs.models.SegNet(num_classes=7)
+        model = torchconvs.models.SegNet(n_class=7)
         print(sum(p.numel() for p in model.parameters() if p.requires_grad))
     else:
         raise Exception('Unknown model')

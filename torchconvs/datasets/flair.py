@@ -60,21 +60,25 @@ class FLAIRSegBase(data.Dataset):
 
         if self._transform:
             img, mask = self.transform(img, mask)
+        else:
+            img = img.astype(np.float32)
+            img = self._normalize(img)
+            img = np.transpose(img, (2, 0, 1))
 
-            img = torch.from_numpy(img).float()
-            mask = torch.from_numpy(mask).long()
+        img = torch.from_numpy(img).float()
+        mask = torch.from_numpy(mask).long()
 
-            if self.patch_size:
-                if not self.test:
-                    img, mask = scripts.utils.patch_sample(img=img, mask=mask, patch_size=self.patch_size)
-                else:
-                    img, mask = scripts.utils.patch_divide(img=img, mask=mask, patch_size=self.patch_size)
+        if self.patch_size:
+            if not self.test:
+                img, mask = scripts.utils.patch_sample(img=img, mask=mask, patch_size=self.patch_size)
+            else:
+                img, mask = scripts.utils.patch_divide(img=img, mask=mask, patch_size=self.patch_size)
+
         return img, mask
     def transform(self, img, mask):
         aug = self.transforms(image=img, mask=mask)
         img = aug['image'].astype(np.float32)
-        img -= self.mean_rgb
-        img /= self.std_rgb
+        img = self._normalize(img)
         img = np.transpose(img, (2, 0, 1))
         mask = aug['mask']
         return img, mask
@@ -87,7 +91,10 @@ class FLAIRSegBase(data.Dataset):
         mask = mask.numpy()
         return img, mask
 
-
+    def _normalize(self, img):
+        img -= self.mean_rgb
+        img /= self.std_rgb
+        return img
     def mask_encode(self, mask):
         """
         Encode mask pixel distinct values to discrete class numbers
@@ -113,21 +120,3 @@ class FLAIRSegBase(data.Dataset):
         for old_class, new_class in class_mapping.items():
             new_mask[mask == old_class] = new_class
         return new_mask
-
-class OriginalSize(FLAIRSegBase):
-    def __init__(self, root, split, transform=False, patch_size=None, test=False):
-        super().__init__(root, split, transform, patch_size, test)
-
-    def __getitem__(self, idx):
-        img = tiff.imread(self.files[idx]['img'])
-        img = img[..., :3]
-        mask = Image.open(self.files[idx]['msk'])
-        mask = np.asarray(mask)
-        mask = self.mask_encode(mask)
-
-        if self._transform:
-            img, mask = self.transform(img, mask)
-            img = torch.from_numpy(img).float()
-            mask = torch.from_numpy(mask).long()
-
-        return img, mask

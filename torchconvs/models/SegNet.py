@@ -37,11 +37,11 @@ class SegNetBase(nn.Module):
         x = self.decoder(x)
         return x
 
-def SegNet(num_classes: int, pretrained=True):
+def SegNet(n_class: int, pretrained=True):
     """
     Constructs custom SegNet model
     """
-    model = SegNetBase(num_classes)
+    model = SegNetBase(n_class)
     for param in model.parameters():
         param.requires_grad = True
     model.train()

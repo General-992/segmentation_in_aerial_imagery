@@ -1,9 +1,9 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-class _SimpleSegmentationModel(nn.Module):
+class Deep_SimpleSegmentationModel(nn.Module):
     def __init__(self, backbone, classifier):
-        super(_SimpleSegmentationModel, self).__init__()
+        super(Deep_SimpleSegmentationModel, self).__init__()
         self.backbone = backbone
         self.classifier = classifier
 

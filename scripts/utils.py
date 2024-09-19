@@ -34,7 +34,14 @@ def patch_sample(img, mask, patch_size):
     return image_patch, mask_patch
 
 def _fast_hist(label_true, label_pred, n_class):
+    """
+    computes the confusion matrix between the true and
+    predicted labels for a multi-class classification task
+    """
+    # identify only valid pixels
     mask = (label_true >= 0) & (label_true < n_class)
+    # compute combined index for each valid pixel and count each True-Predcited Pair occurence
+    # then reshape into a confusion matrix shape n_classes * n_classes
     hist = np.bincount(
         n_class * label_true[mask].astype(int) +
         label_pred[mask], minlength=n_class ** 2).reshape(n_class, n_class)

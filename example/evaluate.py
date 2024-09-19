@@ -10,6 +10,7 @@ import skimage.io
 import torch
 
 import torchconvs
+import scripts
 import tqdm
 
 
@@ -26,17 +27,30 @@ def main():
     root = osp.expanduser('~/datasets/flair_dataset')
     val_loader = torch.utils.data.DataLoader(
         torchconvs.datasets.FLAIRSegBase(
-            root, split='val', transform=True),
+            root, split='val', transform=False),
         batch_size=16, shuffle=False,
         num_workers=4, pin_memory=True)
 
+    # # Patch-Based training and Full image Testing
+    # test_dataset = torchconvs.datasets.FLAIRSegBase(root='data', split='test', transform=True,
+    #                                                 patch_size=256, test=True, inference_mode='original')
+    #
+    # # Patch-Based training and Tile-Based image Testing
+    # test_dataset = torchconvs.datasets.FLAIRSegBase(root='data', split='test', transform=True,
+    #                                                 patch_size=256, test=True, inference_mode='tiles')
+    #
+    # # Full image training and Full image Testing
+    # test_dataset = torchconvs.datasets.FLAIRSegBase(root='data', split='test', transform=True,
+    #                                                 patch_size=None, test=True, inference_mode='original')
+
     n_class = len(val_loader.dataset.class_names)
     model_data = torch.load(model_file)
-
+    print(model_data['arch'])
     if model_data['arch'].startswith('Unet'):
         model = torchconvs.models.UnetPlusPlus(n_class=n_class)
-    elif model_data['arch'].startswith('Deep'):
-        model = torchconvs.models.DeepLabV3Plus(n_class=n_class)
+    ## TODO retrain and rewrite the name
+    elif model_data['arch'].startswith('_Simple'):
+        model = torchconvs.models.DeepLabV3Plus.Deeplabv3plus_resnet(n_class=n_class)
     elif model_data['arch'].startswith('Seg'):
         model = torchconvs.models.SegNet(n_class=n_class)
     else:
@@ -55,7 +69,7 @@ def main():
 
     print('==> Evaluating %s' % model.__class__.__name__)
     visualizations = []
-    label_trues, label_preds = [], []
+    metrics = []
     for batch_idx, (data, target) in tqdm.tqdm(enumerate(val_loader),
                                                total=len(val_loader),
                                                ncols=80, leave=False):
@@ -70,17 +84,19 @@ def main():
         lbl_pred = score.detach().max(1)[1].cpu().numpy()[:, :, :]
         lbl_true = target.detach().cpu()
         for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
+            # reconstruct the original images
             img, lt = val_loader.dataset.untransform(img, lt)
-            label_trues.append(lt)
-            label_preds.append(lp)
-            if len(visualizations) < 9:
+
+            acc, acc_cls, mean_iu, fwavacc = scripts.utils.label_accuracy_score(
+                label_trues=lt, label_preds=lp, n_class=n_class)
+            metrics.append((acc, acc_cls, mean_iu, fwavacc))
+
+            if len(visualizations) < 6:
                 viz = fcn.utils.visualize_segmentation(
                     lbl_pred=lp, lbl_true=lt, img=img, n_class=n_class,
                     label_names=val_loader.dataset.class_names)
                 visualizations.append(viz)
-    metrics = torchconvs.utils.label_accuracy_score(
-        label_trues, label_preds, n_class=n_class)
-    metrics = np.array(metrics)
+    metrics = np.mean(metrics, axis=0)
     metrics *= 100
     print('''\
 Accuracy: {0}
