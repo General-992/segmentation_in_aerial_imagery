@@ -177,8 +177,8 @@ class Trainer(object):
             shutil.copy(osp.join(self.out, 'checkpoint.pth.tar'),
                         osp.join(self.out, 'model_best.pth.tar'))
 
-            if training:
-                self.model.train()
+        if training:
+            self.model.train()
 
 
     def train_epoch(self):

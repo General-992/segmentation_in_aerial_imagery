@@ -10,12 +10,17 @@ import yaml
 
 import torchconvs
 
-
 def git_hash():
     cmd = 'git log -n 1 --pretty="%h"'
     ret = subprocess.check_output(shlex.split(cmd)).strip()
     if isinstance(ret, bytes):
         ret = ret.decode()
+
+    # Check for uncommitted changes
+    status_cmd = 'git status --porcelain'
+    status = subprocess.check_output(shlex.split(status_cmd)).strip()
+    if status:
+        ret += '-dirty'
     return ret
 
 
@@ -76,22 +81,35 @@ def main():
         torchconvs.datasets.FLAIRSegBase(root, split='val', transform=True),
         batch_size=args.batch_size, shuffle=False, **kwargs)
 
+
+    n_class = train_loader.dataset.class_names.shape[0]
     # 2. model
-    if args.model.lower() == 'unetplusplus':
+    if args.model.lower().startswith('unet'):
+        ## TODO number of tranable parameters is for resnet50, recalculate
         # num of trainable params = 48.986.615
         print('Start training Unet')
-        model = torchconvs.models.UnetPlusPlus(n_class=7)
-    elif args.model.lower() == 'deeplab':
+        model = torchconvs.models.UnetPlusPlus(n_class=n_class)
+    elif args.model.lower().startswith('deepl'):
         #  num of trainable params = 39.758.247
         print('Start training Deeplab')
-        model = torchconvs.models.DeepLabV3Plus.Deeplabv3plus_resnet(n_class=7)
-    elif args.model.lower() == 'segnet':
+        model = torchconvs.models.DeepLabV3Plus.Deeplabv3plus_resnet(n_class=n_class)
+    elif args.model.lower().startswith('segnet'):
         print('Start training Segnet')
         # num of trainable params = 12.932.295
-        model = torchconvs.models.SegNet(n_class=7)
+        model = torchconvs.models.SegNet(n_class=n_class)
         print(sum(p.numel() for p in model.parameters() if p.requires_grad))
+    elif args.model.lower().startswith('maskr'):
+        # num of trainable params = 43.726.905
+        print('Start training MaskRCNN')
+        model = torchconvs.models.MaskRCNN(n_class=n_class)
     else:
         raise Exception('Unknown model')
+
+    sum = 0
+    for param in model.parameters():
+        if param.requires_grad:
+            sum += param.numel()
+    print(f'Total params: {sum}, model: {args.model}')
 
     start_epoch = 0
     start_iteration = 0
