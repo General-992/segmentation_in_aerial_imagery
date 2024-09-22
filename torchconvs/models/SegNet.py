@@ -3,10 +3,14 @@ import torch.nn as nn
 import torchvision.models as models
 
 class SegNetBase(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes = 7, pretrained=True):
         super(SegNetBase, self).__init__()
 
-        vgg16 = models.vgg16_bn(pretrained=True)
+        if pretrained:
+            vgg16 = models.vgg16_bn(pretrained=True)
+        else:
+            vgg16 = models.vgg16(pretrained=False)
+
         self.encoder = nn.Sequential(*list(vgg16.features.children())[:33])
 
         self.decoder = nn.Sequential(

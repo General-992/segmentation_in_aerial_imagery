@@ -14,8 +14,8 @@ X = []
 for image_file in image_files:
     corresponding_mask = image_file.replace('IMG', 'MSK')
     if corresponding_mask in mask_files:
-        image_path = os.path.join(IMAGE_PATH, image_file)
-        mask_path = os.path.join(LABEL_PATH, corresponding_mask)
+        image_path = os.path.join('img', image_file)
+        mask_path = os.path.join('msk', corresponding_mask)
         X.append((image_path, mask_path))
     else:
         raise FileNotFoundError

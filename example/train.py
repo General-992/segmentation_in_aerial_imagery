@@ -63,8 +63,9 @@ def main():
         yaml.safe_dump(args.__dict__, f, default_flow_style=False)
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
-    cuda = torch.cuda.is_available()
 
+    cuda = torch.cuda.is_available()
+    print(f'Cuda available: {cuda}')
     torch.manual_seed(1337)
     if cuda:
         torch.cuda.manual_seed(1337)
@@ -76,6 +77,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(
         torchconvs.datasets.FLAIRSegBase(root, split='train', transform=True),
         batch_size=args.batch_size, shuffle=True, **kwargs)
+    ds = torchconvs.datasets.FLAIRSegBase(root, split='train', transform=True)
 
     val_loader = torch.utils.data.DataLoader(
         torchconvs.datasets.FLAIRSegBase(root, split='val', transform=True),
@@ -85,8 +87,7 @@ def main():
     n_class = train_loader.dataset.class_names.shape[0]
     # 2. model
     if args.model.lower().startswith('unet'):
-        ## TODO number of tranable parameters is for resnet50, recalculate
-        # num of trainable params = 48.986.615
+        # num of trainable params = 26.079.479
         print('Start training Unet')
         model = torchconvs.models.UnetPlusPlus(n_class=n_class)
     elif args.model.lower().startswith('deepl'):
@@ -98,10 +99,10 @@ def main():
         # num of trainable params = 12.932.295
         model = torchconvs.models.SegNet(n_class=n_class)
         print(sum(p.numel() for p in model.parameters() if p.requires_grad))
-    elif args.model.lower().startswith('maskr'):
+    elif args.model.lower().startswith('hrnet'):
         # num of trainable params = 43.726.905
-        print('Start training MaskRCNN')
-        model = torchconvs.models.MaskRCNN(n_class=n_class)
+        print('Start training HRNet')
+        model = torchconvs.models.HRNet(n_class=n_class)
     else:
         raise Exception('Unknown model')
 

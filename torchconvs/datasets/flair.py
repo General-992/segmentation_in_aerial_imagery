@@ -42,6 +42,8 @@ class FLAIRSegBase(data.Dataset):
         imgsets_file = osp.join(self.root, '%s.txt' % split)
         for did in open(imgsets_file):
             img_file, lbl_file = did.strip().split(' ')
+            img_file = osp.join(self.root, img_file)
+            lbl_file = osp.join(self.root, lbl_file)
             self.files.append({
                 'img': img_file,
                 'msk': lbl_file,
