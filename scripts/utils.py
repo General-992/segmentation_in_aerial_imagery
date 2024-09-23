@@ -2,6 +2,8 @@ from random import randint
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import torch
+import torchconvs
 def patch_divide(img, mask, patch_size):
     """
     If the image is larger than 256x256 and it is a testing stage
@@ -112,3 +114,82 @@ def plot_image_label_classes(img, mask, class_names):
     # Adjust layout to avoid overlapping
     plt.tight_layout()
     plt.show()
+
+
+def plot_metrics_per_month(month_metrics):
+    """
+    Plots bar charts showing the segmentation metrics (accuracy, class accuracy, mean IU, FWAV accuracy)
+    for each month.
+
+    Parameters:
+    month_metrics (dict): A dictionary where keys are months ('1', '2', ..., '12')
+                          and values are lists of metric tuples (accuracy, accuracy_class, mean_iu, fwavacc).
+    """
+    months = []
+    accuracies = []
+    accuracy_classes = []
+    mean_ius = []
+    fwav_accs = []
+
+    # Calculate the average for each metric for each month
+    for month, metrics in month_metrics.items():
+        if metrics:  # Ensure the month has metrics
+            avg_metrics = np.mean(metrics, axis=0)  # Calculate mean metrics for the month
+            accuracy, acc_cls, mean_iu, fwavacc = avg_metrics * 100  # Convert to percentages
+            months.append(int(month))  # Store the month (convert string month to integer)
+            accuracies.append(accuracy)  # Store accuracy
+            accuracy_classes.append(acc_cls)  # Store class accuracy
+            mean_ius.append(mean_iu)  # Store mean IU
+            fwav_accs.append(fwavacc)  # Store FWAV accuracy
+
+    # Sort by month to ensure the x-axis is ordered correctly
+    months, accuracies, accuracy_classes, mean_ius, fwav_accs = zip(
+        *sorted(zip(months, accuracies, accuracy_classes, mean_ius, fwav_accs)))
+
+    # Plotting the bar charts
+    metrics_names = ['Accuracy (%)', 'Class Accuracy (%)', 'Mean IU (%)', 'FWAV Accuracy (%)']
+    metrics_data = [accuracies, accuracy_classes, mean_ius, fwav_accs]
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    axes = axes.flatten()
+
+    for idx, ax in enumerate(axes):
+        ax.bar(months, metrics_data[idx], color='skyblue')
+        ax.set_xlabel('Month', fontsize=12)
+        ax.set_ylabel(metrics_names[idx], fontsize=12)
+        ax.set_title(f'{metrics_names[idx]} per Month', fontsize=14)
+        ax.set_xticks(months)
+        ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+    plt.tight_layout()
+    plt.show()
+
+
+def model_select(model_name: str, n_class: int = 7) -> torch.nn.Module:
+    """
+    Sets up the model
+    """
+    if model_name.lower().startswith('unet'):
+        # num of trainable params = 26.079.479
+        print('Start training Unet')
+        model = torchconvs.models.UnetPlusPlus(n_class=n_class)
+    elif model_name.lower().startswith('deepl'):
+        #  num of trainable params = 39.758.247
+        print('Start training Deeplab')
+        model = torchconvs.models.Deeplabv3plus_resnet(n_class=n_class)
+    elif model_name.lower().startswith('segnet'):
+        print('Start training Segnet')
+        # num of trainable params = 12.932.295
+        model = torchconvs.models.SegNet(n_class=n_class)
+    elif model_name.lower().startswith('hrnet'):
+        # num of trainable params = 43.726.905
+        print('Start training HRNet')
+        model = torchconvs.models.HRNet(n_class=n_class)
+    else:
+        raise Exception('Unknown model')
+    sum = 0
+    for param in model.parameters():
+        if param.requires_grad:
+            sum += param.numel()
+    print(f'Total trainable params: {sum}, model: {model_name}')
+    return model

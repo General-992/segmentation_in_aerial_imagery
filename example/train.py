@@ -9,7 +9,7 @@ import torch
 import yaml
 
 import torchconvs
-
+import scripts
 def git_hash():
     cmd = 'git log -n 1 --pretty="%h"'
     ret = subprocess.check_output(shlex.split(cmd)).strip()
@@ -22,7 +22,10 @@ def git_hash():
     if status:
         ret += '-dirty'
     return ret
-
+def none_or_int(value):
+    if value.lower() == 'none':
+        return None
+    return int(value)
 
 cuda = torch.cuda.is_available()
 here = osp.dirname(osp.abspath(__file__))
@@ -38,6 +41,9 @@ def main():
     parser.add_argument('--resume', help='checkpoint path')
     parser.add_argument(
         '--max-epoch', type=int, default=100, help='max epoch'
+    )
+    parser.add_argument(
+        '--patch-size', type= none_or_int, default=256, help="Patch size for patchifying. Use 'None' to disable patchifying.",
     )
     parser.add_argument(
         '--max-lr', type=float, default=1.0e-3, help='learning rate',
@@ -75,42 +81,19 @@ def main():
     kwargs = {'num_workers': 4, 'pin_memory': True, 'prefetch_factor': 2} if cuda else {}
 
     train_loader = torch.utils.data.DataLoader(
-        torchconvs.datasets.FLAIRSegBase(root, split='train', transform=True),
+        torchconvs.datasets.FLAIRSegBase(root, split='train', patch_size=args.patch_size, transform=True),
         batch_size=args.batch_size, shuffle=True, **kwargs)
-    ds = torchconvs.datasets.FLAIRSegBase(root, split='train', transform=True)
+
 
     val_loader = torch.utils.data.DataLoader(
-        torchconvs.datasets.FLAIRSegBase(root, split='val', transform=True),
+        torchconvs.datasets.FLAIRSegBase(root, split='val', patch_size=args.patch_size, transform=True),
         batch_size=args.batch_size, shuffle=False, **kwargs)
 
 
     n_class = train_loader.dataset.class_names.shape[0]
     # 2. model
-    if args.model.lower().startswith('unet'):
-        # num of trainable params = 26.079.479
-        print('Start training Unet')
-        model = torchconvs.models.UnetPlusPlus(n_class=n_class)
-    elif args.model.lower().startswith('deepl'):
-        #  num of trainable params = 39.758.247
-        print('Start training Deeplab')
-        model = torchconvs.models.DeepLabV3Plus.Deeplabv3plus_resnet(n_class=n_class)
-    elif args.model.lower().startswith('segnet'):
-        print('Start training Segnet')
-        # num of trainable params = 12.932.295
-        model = torchconvs.models.SegNet(n_class=n_class)
-        print(sum(p.numel() for p in model.parameters() if p.requires_grad))
-    elif args.model.lower().startswith('hrnet'):
-        # num of trainable params = 43.726.905
-        print('Start training HRNet')
-        model = torchconvs.models.HRNet(n_class=n_class)
-    else:
-        raise Exception('Unknown model')
 
-    sum = 0
-    for param in model.parameters():
-        if param.requires_grad:
-            sum += param.numel()
-    print(f'Total params: {sum}, model: {args.model}')
+    model = scripts.utils(args.model, n_class)
 
     start_epoch = 0
     start_iteration = 0

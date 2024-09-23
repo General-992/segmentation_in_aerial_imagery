@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import argparse
 import os
 import os.path as osp
@@ -12,7 +10,6 @@ import torch
 import torchconvs
 import scripts
 import tqdm
-
 
 def main():
 
@@ -46,17 +43,7 @@ def main():
     n_class = len(val_loader.dataset.class_names)
     model_data = torch.load(model_file)
     print(model_data['arch'])
-    if model_data['arch'].startswith('Unet'):
-        model = torchconvs.models.UnetPlusPlus(n_class=n_class)
-    ## TODO retrain and rewrite the name
-    elif model_data['arch'].startswith('_Simple'):
-        model = torchconvs.models.DeepLabV3Plus.Deeplabv3plus_resnet(n_class=n_class)
-    elif model_data['arch'].startswith('Seg'):
-        model = torchconvs.models.SegNet(n_class=n_class)
-    elif model_data['arch'].startswith('FCN'):
-        model = torchconvs.models.HRNet(n_class=n_class)
-    else:
-        raise ValueError('Model file is not supported')
+    model = scripts.utils.model_select(model_data['arch'], n_class)
 
     if torch.cuda.is_available():
         model = model.cuda()
