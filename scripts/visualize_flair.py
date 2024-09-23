@@ -5,7 +5,7 @@ import random
 
 
 def main():
-    # random.seed(19)
+    random.seed(19)
 
     root = osp.expanduser('~/datasets/flair_dataset')
     dataset = torchconvs.datasets.FLAIRSegBase(root, split='train', transform=False)
