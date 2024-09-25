@@ -82,10 +82,10 @@ def main():
     # 1. dataset
     root = osp.expanduser('~/datasets/flair_dataset')
     kwargs = {'num_workers': 4, 'pin_memory': True, 'prefetch_factor': 2} if cuda else {}
-    ## TODO set configurable train batchsize
+    ## TODO set configurable train-val batchsize
     train_loader = torch.utils.data.DataLoader(
         torchconvs.datasets.FLAIRSegBase(root, split='train', transform=True),
-        batch_size=16, shuffle=True, **kwargs)
+        batch_size=args.batch_size, shuffle=True, **kwargs)
 
 
     val_loader = torch.utils.data.DataLoader(
