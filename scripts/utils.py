@@ -182,7 +182,7 @@ def model_select(model_name: str, n_class: int = 7) -> torch.nn.Module:
         # num of trainable params = 12.932.295
         model = torchconvs.models.SegNet(n_class=n_class)
     elif model_name.lower().startswith('hrnet'):
-        # num of trainable params = 43.726.905
+        # num of trainable params = 31.990.087
         print('Start training HRNet')
         model = torchconvs.models.HRNet(n_class=n_class)
     else:

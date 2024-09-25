@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="learning curve" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="train " type="PythonConfigurationType" factoryName="Python">
     <module name="masters2" />
     <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
@@ -14,8 +14,8 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/example/learning_curve.py" />
-    <option name="PARAMETERS" value="example/logs/segnet_2024_09_16.17_31/log.csv" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/example/train.py" />
+    <option name="PARAMETERS" value="-g 0 -model hrnet" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

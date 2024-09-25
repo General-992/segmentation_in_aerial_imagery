@@ -57,6 +57,9 @@ def main():
     parser.add_argument(
         '--batch-size', type=int, default=24, help='batch size',
     )
+    parser.add_argument(
+        '--optim', type=str, default='adamw', help='optimizer',
+    )
 
     args = parser.parse_args()
     args.git_hash = git_hash()
@@ -79,10 +82,10 @@ def main():
     # 1. dataset
     root = osp.expanduser('~/datasets/flair_dataset')
     kwargs = {'num_workers': 4, 'pin_memory': True, 'prefetch_factor': 2} if cuda else {}
-
+    ## TODO set configurable train batchsize
     train_loader = torch.utils.data.DataLoader(
-        torchconvs.datasets.FLAIRSegBase(root, split='train', patch_size=args.patch_size, transform=True),
-        batch_size=args.batch_size, shuffle=True, **kwargs)
+        torchconvs.datasets.FLAIRSegBase(root, split='train', transform=True),
+        batch_size=16, shuffle=True, **kwargs)
 
 
     val_loader = torch.utils.data.DataLoader(
@@ -93,7 +96,7 @@ def main():
     n_class = train_loader.dataset.class_names.shape[0]
     # 2. model
 
-    model = scripts.utils(args.model, n_class)
+    model = scripts.utils.model_select(args.model, n_class)
 
     start_epoch = 0
     start_iteration = 0
@@ -118,7 +121,13 @@ def main():
     #     weight_decay=args.weight_decay)
 
     # the range of lr for a Adamw is 1e-3 while for SGD is 1e-10 x_x
-    optim = torch.optim.AdamW(model.parameters(), lr=args.max_lr, weight_decay=args.weight_decay)
+    if args.optim.lower() == "adamw":
+        optim = torch.optim.AdamW(model.parameters(), lr=args.max_lr, weight_decay=args.weight_decay)
+    elif args.optim.lower() == "sgd":
+        optim = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
+    else:
+        raise Exception(f'Unsupported optimizer: {args.optim}')
+
     if args.resume:
         optim.load_state_dict(checkpoint['optim_state_dict'])
 
