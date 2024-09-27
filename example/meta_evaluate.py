@@ -96,7 +96,7 @@ def main():
             Accuracy Class: {1}
             Mean IU: {2}
             FWAV Accuracy: {3}'''.format(*metrics))
-    scripts.utils.plot_metrics_per_month(month_metrics)
+    scripts.utils.plot_metrics_per_month(month_metrics, model_data['arch'])
 
 
 

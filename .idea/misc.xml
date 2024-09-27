@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="new_master (3)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="new_master (3)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="torchsegm" project-jdk-type="Python SDK" />
 </project>

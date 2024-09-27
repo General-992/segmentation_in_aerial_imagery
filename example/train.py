@@ -49,16 +49,19 @@ def main():
         '--max-lr', type=float, default=1.0e-3, help='learning rate',
     )
     parser.add_argument(
-        '--weight-decay', type=float, default=0.0005, help='weight decay',
+        '--weight-decay', type=float, default=0.0001, help='weight decay',
     )
     parser.add_argument(
-        '--momentum', type=float, default=0.99, help='momentum',
+        '--momentum', type=float, default=0.9, help='momentum',
     )
     parser.add_argument(
         '--batch-size', type=int, default=24, help='batch size',
     )
     parser.add_argument(
         '--optim', type=str, default='adamw', help='optimizer',
+    )
+    parser.add_argument(
+        '--data-path', type=str, default=None, help='specify path to dataset',
     )
 
     args = parser.parse_args()
@@ -80,7 +83,13 @@ def main():
         torch.cuda.manual_seed(1337)
 
     # 1. dataset
-    root = osp.expanduser('~/datasets/flair_dataset')
+    if args.data_path is None:
+        root = osp.expanduser('~/flair_dataset')
+        file_list = os.listdir(root)
+        required = ['img', 'msk', 'train.txt', 'val.txt']
+        if not required.issubset(file_list):
+            raise Exception('Dataset repository incorrect setup')
+
     kwargs = {'num_workers': 4, 'pin_memory': True, 'prefetch_factor': 2} if cuda else {}
     ## TODO set configurable train-val batchsize
     train_loader = torch.utils.data.DataLoader(
@@ -106,14 +115,13 @@ def main():
         model.load_state_dict(checkpoint['model_state_dict'])
         start_epoch = checkpoint['epoch']
         start_iteration = checkpoint['iteration']
-    # else:
-        # vgg16 = torchfcn.models.VGG16(pretrained=True)
-        # model.copy_params_from_vgg16(vgg16)
+
     if cuda:
         model = model.cuda()
 
     # 3. optimizer
 
+    ## TODO: implement configurable lr
     # optim = torch.optim.SGD(
     #     params=model.parameters(),
     #     lr=args.lr,
@@ -124,7 +132,7 @@ def main():
     if args.optim.lower() == "adamw":
         optim = torch.optim.AdamW(model.parameters(), lr=args.max_lr, weight_decay=args.weight_decay)
     elif args.optim.lower() == "sgd":
-        optim = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
+        optim = torch.optim.SGD(model.parameters(), lr=0.01, momentum=args.momentum, weight_decay=args.weight_decay)
     else:
         raise Exception(f'Unsupported optimizer: {args.optim}')
 
