@@ -1,7 +1,7 @@
 from .DeepLabv3 import resnet, deeplab, intermediate_layer_getter
 
 # Deeplab v3+ resnet backbone
-def Deeplabv3plus_resnet(n_class, pretrained_backbone=True):
+def Deeplabv3plus_resnet(n_class: int=6, pretrained_backbone: bool=True):
     """Constructs a DeepLabV3Plus model."""
     replace_stride_with_dilation = [False, False, True]
     aspp_dilate = [6, 12, 18]

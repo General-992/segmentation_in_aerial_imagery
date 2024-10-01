@@ -7,6 +7,8 @@ import subprocess
 
 import torch
 import yaml
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../torchconvs')))
 
 import torchconvs
 import scripts
@@ -37,7 +39,7 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument('-g', '--gpu', type=int, required=True, help='gpu id')
-    parser.add_argument('-model', type=str, help='model name')
+    parser.add_argument('--model', type=str, help='model name')
     parser.add_argument('--resume', help='checkpoint path')
     parser.add_argument(
         '--max-epoch', type=int, default=100, help='max epoch'
