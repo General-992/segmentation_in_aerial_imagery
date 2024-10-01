@@ -26,52 +26,23 @@ def patch_sample(img, mask, patch_size):
     Randomly samples patches from images, useful
     when dealing with large resolution map images.
     Each patch has a fixed size of patch_size x patch_size pixels
+
+    Input:
+    :img: ndarray[num_channels, height, width]
+    :mask: ndarray[height, width]
+    :patch_size: int
+
+    Output:
+    :image_patch: ndarray[num_channels, patch_size, patch_size]
+    :mask_patch: ndarray[patch_size, patch_size]
     """
-    _, h, w = img.size()
+    _, h, w = img.shape
     top = randint(0, h - patch_size)
     left = randint(0, w - patch_size)
 
     image_patch = img[:, top:top + patch_size, left:left + patch_size]
     mask_patch = mask[top:top + patch_size, left:left + patch_size]
     return image_patch, mask_patch
-
-def _fast_hist(label_true, label_pred, n_class):
-    """
-    computes the confusion matrix between the true and
-    predicted labels for a multi-class classification task
-    """
-    # identify only valid pixels
-    mask = (label_true >= 0) & (label_true < n_class)
-    # compute combined index for each valid pixel and count each True-Predcited Pair occurence
-    # then reshape into a confusion matrix shape n_classes * n_classes
-    hist = np.bincount(
-        n_class * label_true[mask].astype(int) +
-        label_pred[mask], minlength=n_class ** 2).reshape(n_class, n_class)
-    return hist
-
-def label_accuracy_score(label_trues, label_preds, n_class):
-    """Returns accuracy score evaluation result.
-
-      - Overall accuracy
-      - Mean accuracy
-      - Mean IU
-      - Frequency-Weighted Average Accuracy (fwavacc)
-    """
-    hist = np.zeros((n_class, n_class))
-    for lt, lp in zip(label_trues, label_preds):
-        hist += _fast_hist(lt.flatten(), lp.flatten(), n_class)
-    acc = np.diag(hist).sum() / hist.sum()
-    with np.errstate(divide='ignore', invalid='ignore'):
-        acc_cls = np.diag(hist) / hist.sum(axis=1)
-    acc_cls = np.nanmean(acc_cls)
-    with np.errstate(divide='ignore', invalid='ignore'):
-        iu = np.diag(hist) / (
-            hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist)
-        )
-    mean_iu = np.nanmean(iu)
-    freq = hist.sum(axis=1) / hist.sum()
-    fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
-    return acc, acc_cls, mean_iu, fwavacc
 
 
 def plot_image_label_classes(img, mask, class_names):
@@ -163,7 +134,7 @@ def plot_metrics_per_month(month_metrics, model_name):
     plt.show()
 
 
-def model_select(model_name: str, n_class: int = 7) -> torch.nn.Module:
+def model_select(model_name: str, n_class: int = 6) -> torch.nn.Module:
     """
     Sets up the model
     """
@@ -171,8 +142,7 @@ def model_select(model_name: str, n_class: int = 7) -> torch.nn.Module:
         # num of trainable params = 26.079.479
         print('Start training Unet')
         model = torchconvs.models.UnetPlusPlus(n_class=n_class)
-    ## TODO: delete the second option
-    elif model_name.lower().startswith('deepl') or model_name.lower().startswith('_simple'):
+    elif model_name.lower().startswith('deep'):
         #  num of trainable params = 39.758.247
         print('Start training Deeplab')
         model = torchconvs.models.Deeplabv3plus_resnet(n_class=n_class)

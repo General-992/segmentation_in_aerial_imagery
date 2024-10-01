@@ -15,7 +15,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/example/train.py" />
-    <option name="PARAMETERS" value="-g 0 -model segnet" />
+    <option name="PARAMETERS" value="-g 0 -model deepl --data-path $USER_HOME$/datasets/FLAIR/flair_dataset_train_val" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

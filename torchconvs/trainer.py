@@ -90,7 +90,6 @@ class Trainer(object):
 
                 score = self.model(data)
 
-
             loss = self.loss(score, target)
             loss_data = loss.data.item()
 
@@ -99,14 +98,13 @@ class Trainer(object):
 
             val_loss += loss_data / len(data)
 
-
             imgs = data.data.cpu()
             lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
             lbl_true = target.data.cpu()
             for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
                 img, lt = self.val_loader.dataset.untransform(img, lt)
 
-                acc, acc_cls, mean_iu, fwavacc = scripts.utils.label_accuracy_score(
+                acc, acc_cls, mean_iu, fwavacc = scripts.metrics.label_accuracy_score(
                         label_trues=lt, label_preds=lp, n_class=n_class)
                 metrics.append((acc, acc_cls, mean_iu, fwavacc))
                 if len(visualizations) < 9:
@@ -123,7 +121,7 @@ class Trainer(object):
         skimage.io.imsave(out_file, imgviz.tile(visualizations))
 
         val_loss /= len(self.val_loader)
-        # osp.join(self.out, 'epoch%log.csv' % self.epoch)
+
         with open(osp.join(self.out, 'log.csv'), 'a') as f:
             elapsed_time = (
                 datetime.datetime.now(pytz.timezone('Europe/Berlin')) -
@@ -175,8 +173,9 @@ class Trainer(object):
                 continue  # for resuming
             self.iteration = iteration
             # start validation after a specified number of iter-s or after all train batches
-            if self.iteration % (self.interval_validate - 1) == 0:
+            if self.iteration % self.interval_validate == 0:
                 self.validate()
+                torch.cuda.empty_cache()
             assert self.model.training
 
             if self.cuda:
@@ -206,7 +205,7 @@ class Trainer(object):
             lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
             lbl_true = target.data.cpu().numpy()
             acc, acc_cls, mean_iu, fwavacc = \
-                scripts.utils.label_accuracy_score(
+                scripts.metrics.label_accuracy_score(
                     lbl_true, lbl_pred, n_class=n_class)
             metrics.append((acc, acc_cls, mean_iu, fwavacc))
             metrics = np.mean(metrics, axis=0)
@@ -219,7 +218,7 @@ class Trainer(object):
                     metrics.tolist() + [''] * 5 + [elapsed_time]
                 log = map(str, log)
                 f.write(','.join(log) + '\n')
-            torch.cuda.empty_cache()
+
 
     def train(self):
         for epoch in tqdm.trange(self.epoch, self.max_epoch, desc='Train', ncols=80):

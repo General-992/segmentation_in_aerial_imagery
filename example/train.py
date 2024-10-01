@@ -55,13 +55,13 @@ def main():
         '--momentum', type=float, default=0.9, help='momentum',
     )
     parser.add_argument(
-        '--batch-size', type=int, default=24, help='batch size',
+        '--batch-size', type=int, default=16, help='batch size',
     )
     parser.add_argument(
         '--optim', type=str, default='adamw', help='optimizer',
     )
     parser.add_argument(
-        '--data-path', type=str, default=None, help='specify path to dataset',
+        '--data-path', type=str, help='specify path to dataset',
     )
 
     args = parser.parse_args()
@@ -85,24 +85,27 @@ def main():
     # 1. dataset
     if args.data_path is None:
         root = osp.expanduser('~/flair_dataset')
-        file_list = os.listdir(root)
-        required = ['img', 'msk', 'train.txt', 'val.txt']
-        if not required.issubset(file_list):
-            raise Exception('Dataset repository incorrect setup')
+    else:
+        root = args.data_path
+    file_list = os.listdir(root)
+    required = {'img', 'msk', 'train.txt', 'val.txt'}
+    if not required.issubset(set(file_list)):
+        raise Exception('Dataset repository setup is incorrect')
 
     kwargs = {'num_workers': 4, 'pin_memory': True, 'prefetch_factor': 2} if cuda else {}
     ## TODO set configurable train-val batchsize
     train_loader = torch.utils.data.DataLoader(
-        torchconvs.datasets.FLAIRSegBase(root, split='train', transform=True),
+        torchconvs.datasets.FLAIRSegBase(root, split='train', patch_size=args.patch_size, transform=True),
         batch_size=args.batch_size, shuffle=True, **kwargs)
 
 
     val_loader = torch.utils.data.DataLoader(
         torchconvs.datasets.FLAIRSegBase(root, split='val', patch_size=args.patch_size, transform=True),
-        batch_size=args.batch_size, shuffle=False, **kwargs)
+        batch_size=24, shuffle=False, **kwargs)
 
 
     n_class = train_loader.dataset.class_names.shape[0]
+    print(f'Number of semantic classes: {n_class}')
     # 2. model
 
     model = scripts.utils.model_select(args.model, n_class)

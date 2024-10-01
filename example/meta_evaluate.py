@@ -2,7 +2,6 @@ import argparse
 import os
 import os.path as osp
 
-import fcn
 import numpy as np
 import skimage.io
 import torch
@@ -12,6 +11,10 @@ import scripts
 import tqdm
 
 import json
+
+
+
+
 
 
 def main():
@@ -78,14 +81,13 @@ def main():
             img, lt = val_loader.dataset.untransform(img, lt)
 
             # Calculate metrics for the current image
-            acc, acc_cls, mean_iu, fwavacc = scripts.utils.label_accuracy_score(
+            acc, acc_cls, mean_iu, fwavacc = scripts.metrics.label_accuracy_score(
                 label_trues=lt, label_preds=lp, n_class=n_class)
 
             # Append the metrics to the correct month entry
             month_str = str(int(m))  # Ensure the month is a string (e.g., '1', '2', ..., '12')
             if month_str in month_metrics:
                 month_metrics[month_str].append((acc, acc_cls, mean_iu, fwavacc))
-    ## TODO: has not checked this part
     for month, metrics in month_metrics.items():
         if metrics:
             metrics = np.mean(metrics, axis=0)
