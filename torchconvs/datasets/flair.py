@@ -110,7 +110,7 @@ class FLAIRSegBase(data.Dataset):
 
         class_mapping = {
             4: 0, 10: 0, 14: 0, 15: 0, 8: 0,   # Soil, Snow, clear-cuts, herbaceous vegetation, bushes
-            2: 1, 3: 1,                        # Pervious and transportation surfaces and sports fields
+            2: 1, 3: 1,                        # Pervious, Impervious and transportation surfaces and sports fields
             1: 2, 13: 2, 18: 2,                # Buildings, swimming pools, Green houses
             6: 3, 7: 3, 16: 3, 17: 3,          # Trees
             9: 4, 11: 5, 12: 4,                # Agricultural surfaces

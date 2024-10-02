@@ -9,7 +9,7 @@ from torch.utils import data
 import tifffile as tiff
 import albumentations as A
 import scripts
-
+from skimage.transform import resize
 class ISPRSBase(data.Dataset):
     """
     Base ISPRS dataset class
@@ -21,7 +21,7 @@ class ISPRSBase(data.Dataset):
     """
     class_names = np.array([
         'Soil, Snow, clear - cuts, herbaceous vegetation',
-        'Pervious and transportation surfaces and sports fields',
+        'Pervious, Impervious and transportation surfaces and sports fields',
         'Buildings, swimming pools, Green houses',
         'Trees',
         'Agricultural surfaces',
@@ -36,8 +36,8 @@ class ISPRSBase(data.Dataset):
     }
 
 
-    mean_rgb = np.array([113.775, 118.081, 109.273], dtype=np.float32)
-    std_rgb = np.array([52.419, 46.028, 45.260], dtype=np.float32)
+    mean_rgb = np.array([86.551, 92.545 , 85.9151], dtype=np.float32)
+    std_rgb = np.array([35.818, 35.399, 36.802], dtype=np.float32)
     transforms = A.Compose([A.HorizontalFlip(), A.VerticalFlip(),
                             A.GridDistortion(p=0.2), A.RandomBrightnessContrast((0, 0.5), (0, 0.5)),
                             A.GaussNoise()])
@@ -61,11 +61,19 @@ class ISPRSBase(data.Dataset):
         return len(self.files)
 
     def __getitem__(self, idx):
-
+        IamGay = True
         img = tiff.imread(self.files[idx]['img'])
         mask = Image.open(self.files[idx]['msk'])
         mask = np.asarray(mask)
         mask = self.mask_encode(mask)
+
+
+        target_size = (512, 512)  # Adjust to your desired size
+
+        if img.shape[:2] != target_size:
+            img = resize(img, target_size, preserve_range=True, anti_aliasing=True)  # For the image (use bilinear)
+            mask = resize(mask, target_size, order=0, preserve_range=True, anti_aliasing=False).astype(
+                np.int64)  # For the mask (use nearest-neighbor)
 
         if self._transform:
             img, mask = self.transform(img, mask)
@@ -125,4 +133,7 @@ class ISPRSBase(data.Dataset):
 if __name__ == '__main__':
     root = os.path.expanduser('~/datasets/ISPRS/Potsdam')
     isprs = ISPRSBase(root=root)
-    isprs[0]
+
+    for image, mask in isprs:
+        print(image.shape, mask.shape)
+        break

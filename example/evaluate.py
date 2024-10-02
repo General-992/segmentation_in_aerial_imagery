@@ -27,8 +27,8 @@ def main():
 
     test_loader = torch.utils.data.DataLoader(
         torchconvs.datasets.FLAIRSegBase(
-            root, split='val', transform=False),
-        batch_size=16, shuffle=False,
+            root, split='val', transform=False, patch_size=None),
+        batch_size=8, shuffle=False,
         num_workers=4, pin_memory=True)
 
     # # Patch-Based training and Full image Testing
