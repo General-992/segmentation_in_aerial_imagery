@@ -81,7 +81,7 @@ def main():
             img, lt = val_loader.dataset.untransform(img, lt)
 
             # Calculate metrics for the current image
-            acc, acc_cls, mean_iu, fwavacc = scripts.metrics.label_accuracy_score(
+            acc, acc_cls, mean_iu, fwavacc, _ = scripts.metrics.label_accuracy_score(
                 label_trues=lt, label_preds=lp, n_class=n_class)
 
             # Append the metrics to the correct month entry

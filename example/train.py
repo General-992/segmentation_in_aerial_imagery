@@ -94,7 +94,7 @@ def main():
     if not required.issubset(set(file_list)):
         raise Exception('Dataset repository setup is incorrect')
 
-    kwargs = {'num_workers': 4, 'pin_memory': True, 'prefetch_factor': 2} if cuda else {}
+    kwargs = {'num_workers': 12, 'pin_memory': True, 'prefetch_factor': 2} if cuda else {}
     ## TODO set configurable train-val batchsize
     train_loader = torch.utils.data.DataLoader(
         torchconvs.datasets.FLAIRSegBase(root, split='train', patch_size=args.patch_size, transform=True),

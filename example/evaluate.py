@@ -11,6 +11,9 @@ import torchconvs
 import scripts
 import tqdm
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 def main():
 
@@ -27,7 +30,7 @@ def main():
 
     test_loader = torch.utils.data.DataLoader(
         torchconvs.datasets.FLAIRSegBase(
-            root, split='val', transform=False, patch_size=None),
+            root, split='val', transform=False, patch_size=512),
         batch_size=8, shuffle=False,
         num_workers=4, pin_memory=True)
 
@@ -62,6 +65,7 @@ def main():
     print('==> Evaluating %s' % model.__class__.__name__)
     visualizations = []
     metrics = []
+    confusion_matrix = []
     avg_boundary_iou = []
     for batch_idx, (data, target) in tqdm.tqdm(enumerate(test_loader),
                                                total=len(test_loader),
@@ -82,9 +86,10 @@ def main():
             # reconstruct the original images
             img, lt = test_loader.dataset.untransform(img, lt)
 
-            acc, acc_cls, mean_iu, fwavacc = scripts.metrics.label_accuracy_score(
+            acc, acc_cls, mean_iu, fwavacc, hist = scripts.metrics.label_accuracy_score(
                 label_trues=lt, label_preds=lp, n_class=n_class)
             metrics.append((acc, acc_cls, mean_iu, fwavacc))
+            confusion_matrix.append(hist)
             avg_boundary_iou.append(scripts.metrics.boundary_iou_multiclass(lt, lp, num_classes=7))
 
             if len(visualizations) < 6:
@@ -92,6 +97,11 @@ def main():
                     lbl_pred=lp, lbl_true=lt, img=img, n_class=n_class,
                     label_names=test_loader.dataset.class_names)
                 visualizations.append(viz)
+        if batch_idx == 100:
+            a = 2
+
+    confusion_matrix = np.sum(confusion_matrix, axis=0)
+    confusion_matrix = (confusion_matrix / 1e6).astype(int)
     metrics = np.mean(metrics, axis=0)
     avg_boundary_iou = np.nanmean(avg_boundary_iou)
     metrics *= 100
@@ -105,6 +115,14 @@ Boundary IoU {4:.3f}'''.format(*metrics, avg_boundary_iou))
     viz = imgviz.tile(visualizations)
     skimage.io.imsave('viz_evaluate.png', viz)
 
+    class_names = ['0', '1', '2', '3', '4', '5']
+
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(confusion_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
+    plt.xlabel('Predicted labels')
+    plt.ylabel('True labels')
+    plt.title('Confusion Matrix')
+    plt.show()
 
 if __name__ == '__main__':
     main()

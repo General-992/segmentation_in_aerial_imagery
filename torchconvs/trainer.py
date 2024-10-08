@@ -104,13 +104,14 @@ class Trainer(object):
             for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
                 img, lt = self.val_loader.dataset.untransform(img, lt)
 
-                acc, acc_cls, mean_iu, fwavacc = scripts.metrics.label_accuracy_score(
+                acc, acc_cls, mean_iu, fwavacc, _ = scripts.metrics.label_accuracy_score(
                         label_trues=lt, label_preds=lp, n_class=n_class)
                 metrics.append((acc, acc_cls, mean_iu, fwavacc))
                 if len(visualizations) < 9:
                     viz = scripts.visualize_segmentation(
                         lbl_pred=lp, lbl_true=lt, img=img, n_class=n_class)
                     visualizations.append(viz)
+            del imgs, lbl_pred, lbl_true
 
         metrics = np.mean(metrics, axis=0)
 
@@ -204,7 +205,7 @@ class Trainer(object):
             metrics = []
             lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
             lbl_true = target.data.cpu().numpy()
-            acc, acc_cls, mean_iu, fwavacc = \
+            acc, acc_cls, mean_iu, fwavacc, _ = \
                 scripts.metrics.label_accuracy_score(
                     lbl_true, lbl_pred, n_class=n_class)
             metrics.append((acc, acc_cls, mean_iu, fwavacc))

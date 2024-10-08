@@ -28,11 +28,11 @@ class ISPRSBase(data.Dataset):
         'Water bodies'
     ])
     ISPRS_labels = ['Impervious surfaces', 'Buildings',
-                    'Low vegetation', 'Tree', 'Car']
+                    'Low vegetation', 'Tree', 'Car', 'Background']
     isprs_to_flair_mapping = {
         (255, 255, 255): 1, (0, 0, 255): 2,
         (0, 255, 255): 0, (0, 255, 0): 3,
-        (255, 255, 0): 1
+        (255, 255, 0): 1, (255, 0, 0): 0
     }
 
 
@@ -61,7 +61,7 @@ class ISPRSBase(data.Dataset):
         return len(self.files)
 
     def __getitem__(self, idx):
-        IamGay = True
+
         img = tiff.imread(self.files[idx]['img'])
         mask = Image.open(self.files[idx]['msk'])
         mask = np.asarray(mask)
@@ -70,7 +70,9 @@ class ISPRSBase(data.Dataset):
 
         target_size = (512, 512)  # Adjust to your desired size
 
-        if img.shape[:2] != target_size:
+        if img.shape[:2] == (500, 500):
+            # If ISPRS Potsdam then resolutions are 500x500
+            # then interpolate to 512x512, not a big deal
             img = resize(img, target_size, preserve_range=True, anti_aliasing=True)  # For the image (use bilinear)
             mask = resize(mask, target_size, order=0, preserve_range=True, anti_aliasing=False).astype(
                 np.int64)  # For the mask (use nearest-neighbor)
@@ -82,12 +84,10 @@ class ISPRSBase(data.Dataset):
             img = self._normalize(img)
             img = np.transpose(img, (2, 0, 1))
 
-        if self.patch_size:
-            if not self.test:
-                img, mask = scripts.utils.patch_sample(img=img, mask=mask, patch_size=self.patch_size)
-            else:
-                img, mask = scripts.utils.patch_divide(img=img, mask=mask, patch_size=self.patch_size)
-
+        if img.shape[1:] == (450, 450):
+            # If ISPRS Vaihingen then their resolutions are 450x450
+            # draw patches of 256x256, it will relieve from the distortion of interpolation to 512x512
+            img, mask = scripts.utils.patch_sample(img=img, mask=mask, patch_size=256)
         img = torch.from_numpy(img).float()
         mask = torch.from_numpy(mask).long()
 
@@ -131,9 +131,10 @@ class ISPRSBase(data.Dataset):
 
 
 if __name__ == '__main__':
-    root = os.path.expanduser('~/datasets/ISPRS/Potsdam')
+    root = os.path.expanduser('~/datasets/ISPRS/Vaihingen')
     isprs = ISPRSBase(root=root)
 
     for image, mask in isprs:
         print(image.shape, mask.shape)
         break
+    print(len(isprs))
