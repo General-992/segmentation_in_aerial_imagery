@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 
-import collections
 import os.path as osp
-import os
 
 import numpy as np
 from PIL import Image
-import scipy.io
 import torch
-from torchvision.transforms import transforms as T
+
 from torch.utils import data
-from random import randint
 import tifffile as tiff
 import albumentations as A
 import scripts
@@ -25,12 +21,12 @@ class FLAIRSegBase(data.Dataset):
     :param patch_size: Patch size for cropping.
     :param test: Whether this is a test dataset.
     """
+
     class_names = np.array([
-        'Soil, Snow, clear - cuts, herbaceous vegetation',
-        'Pervious and transportation surfaces and sports fields',
+        'Soil, Snow, clear - cuts, herbaceous vegetation, brushes, low-vegetation',
+        'Pervious, Impervious and transportation surfaces and sports fields',
         'Buildings, swimming pools, Green houses',
         'Trees',
-        'Bushes',
         'Agricultural surfaces',
         'Water bodies'
     ])
@@ -40,13 +36,11 @@ class FLAIRSegBase(data.Dataset):
     transforms = A.Compose([A.HorizontalFlip(), A.VerticalFlip(),
                             A.GridDistortion(p=0.2), A.RandomBrightnessContrast((0, 0.5), (0, 0.5)),
                             A.GaussNoise()])
-    def __init__(self, root: str, split: str, transform: bool=False, patch_size: int=256, test: bool=False):
+    def __init__(self, root: str, split: str, transform: bool=False, patch_size=256, tile: bool=False):
         self.root = root
         self._transform = transform
         self.patch_size = patch_size
-        self.test = test
-
-        # defaultdict creates dict that automatically expands creating a key and a respectitve list
+        self.tile = tile
         self.files = []
         imgsets_file = osp.join(self.root, '%s.txt' % split)
         for did in open(imgsets_file):
@@ -76,14 +70,14 @@ class FLAIRSegBase(data.Dataset):
             img = self._normalize(img)
             img = np.transpose(img, (2, 0, 1))
 
-        img = torch.from_numpy(img).float()
-        mask = torch.from_numpy(mask).long()
-
         if self.patch_size:
-            if not self.test:
+            if not self.tile:
                 img, mask = scripts.utils.patch_sample(img=img, mask=mask, patch_size=self.patch_size)
             else:
                 img, mask = scripts.utils.patch_divide(img=img, mask=mask, patch_size=self.patch_size)
+
+        img = torch.from_numpy(img).float()
+        mask = torch.from_numpy(mask).long()
 
         return img, mask
     def transform(self, img, mask):
@@ -116,13 +110,12 @@ class FLAIRSegBase(data.Dataset):
         """
 
         class_mapping = {
-            4: 0, 10: 0, 14: 0, 15: 0,   # Soil, Snow, clear-cuts, herbaceous vegetation
-            2: 1, 3: 1,                  # Pervious and transportation surfaces and sports fields
-            1: 2, 13: 2, 18: 2,          # Buildings, swimming pools, Green houses
-            6: 3, 7: 3, 16: 3, 17: 3,    # Trees
-            8: 4,                        # Bushes
-            9: 5, 11: 5, 12: 5,          # Agricultural surfaces
-            5: 6,                        # Water bodies
+            4: 0, 10: 0, 14: 0, 15: 0, 8: 0, 19:0,   # Soil, Snow, clear-cuts, herbaceous vegetation, bushes
+            2: 1, 3: 1,                              # Pervious, Impervious and transportation surfaces and sports fields
+            1: 2, 13: 2, 18: 2,                      # Buildings, swimming pools, Green houses
+            6: 3, 7: 3, 16: 3, 17: 3,                # Trees
+            9: 4, 11: 5, 12: 4,                      # Agricultural surfaces
+            5: 5,                                    # Water bodies
         }
         # Initialize a new mask with the same shape
         new_mask = np.zeros_like(mask)
@@ -131,6 +124,7 @@ class FLAIRSegBase(data.Dataset):
         for old_class, new_class in class_mapping.items():
             new_mask[mask == old_class] = new_class
         return new_mask
+
 class FLAIRSegMeta(FLAIRSegBase):
     """
     Inherits from FLAIRSegBase and adds functionality to track image metadata such as
@@ -162,7 +156,7 @@ class FLAIRSegMeta(FLAIRSegBase):
         return img, mask, int(month), camera
 
 if __name__ == '__main__':
-    root = osp.expanduser('~/datasets/flair_dataset')
+    root = osp.expanduser('~/datasets/FLAIR')
 
     file_path = osp.join(root, 'flair-1_metadata_aerial.json')
     import json

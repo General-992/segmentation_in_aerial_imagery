@@ -1,1 +1,1 @@
-from .flair import FLAIRSegBase, FLAIRSegMeta
+from .flair import FLAIRSegBase

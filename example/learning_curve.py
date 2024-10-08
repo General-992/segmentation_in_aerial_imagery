@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-
-from __future__ import division
-
 import argparse
 import os.path as osp
 
@@ -17,8 +13,15 @@ import seaborn  # NOQA
 def learning_curve(log_file):
     print('==> Plotting log file: %s' % log_file)
 
-    df = pandas.read_csv(log_file)
-
+    if log_file is not str:
+        df_list = []
+        for log in log_file:
+            df_piece = pandas.read_csv(log)
+            df_list.append(df_piece)
+        df = pandas.concat(df_list, ignore_index=True)
+        log_file = log_file[-1]
+    else:
+        df = pandas.read_csv(log_file)
     colors = ['red', 'green', 'blue', 'purple', 'orange']
     colors = seaborn.xkcd_palette(colors)
 
@@ -37,13 +40,14 @@ def learning_curve(log_file):
         'train/mean_iu',
         'train/fwavacc',
     ]
-    df_train = df[columns]
+    df_train = df[columns].copy()
     if hasattr(df_train, 'rolling'):
-        df_train = df_train.rolling(window=10).mean()
+        df_train = df_train.rolling(window=50).mean()
     else:
         df_train = pandas.rolling_mean(df_train, window=10)
     df_train = df_train.dropna()
     iter_per_epoch = df_train[df_train['epoch'] == 1]['iteration'].values[0]
+
     df_train['epoch_detail'] = df_train['iteration'] / iter_per_epoch
 
     # initialize DataFrame for val
@@ -56,7 +60,7 @@ def learning_curve(log_file):
         'valid/mean_iu',
         'valid/fwavacc',
     ]
-    df_valid = df[columns]
+    df_valid = df[columns].copy()
     df_valid = df_valid.dropna()
     df_valid['epoch_detail'] = df_valid['iteration'] / iter_per_epoch
 
@@ -119,12 +123,13 @@ def learning_curve(log_file):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('log_file')
+    parser.add_argument('log_file', nargs='+', help='One or more log files to process')
+
     args = parser.parse_args()
 
-    log_file = args.log_file
+    log_files = args.log_file if len(args.log_file) > 1 else args.log_file[0]
 
-    learning_curve(log_file)
+    learning_curve(log_files)
 
 
 if __name__ == '__main__':

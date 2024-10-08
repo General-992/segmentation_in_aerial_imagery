@@ -1,11 +1,10 @@
 import datetime
-from distutils.version import LooseVersion
 import math
 import os
 import os.path as osp
 import shutil
 
-import fcn
+import imgviz
 import numpy as np
 import pytz
 import skimage.io
@@ -17,33 +16,6 @@ import tqdm
 
 import torchconvs
 import scripts
-
-
-def cross_entropy2d(input, target, weight=None, size_average=True):
-    """
-    Custom cross_entropy loss function allows to calculate cross-entropy
-    with invalid pixels i.e., the pixels that were masked out as -1
-    """
-    # input: (n, c, h, w), target: (n, h, w)
-    n, c, h, w = input.size()
-    # log_p: (n, c, h, w)
-    if LooseVersion(torch.__version__) < LooseVersion('0.3'):
-        # ==0.2.X
-        log_p = F.log_softmax(input)
-    else:
-        # >=0.3
-        log_p = F.log_softmax(input, dim=1)
-    # log_p: (n*h*w, c)
-    log_p = log_p.transpose(1, 2).transpose(2, 3).contiguous()
-    log_p = log_p[target.view(n, h, w, 1).repeat(1, 1, 1, c) >= 0]
-    log_p = log_p.view(-1, c)
-    # target: (n*h*w,)
-    mask = target >= 0
-    target = target[mask]
-    loss = F.nll_loss(log_p, target, weight=weight, reduction='sum')
-    if size_average:
-        loss /= mask.data.sum()
-    return loss
 
 
 class Trainer(object):
@@ -118,7 +90,6 @@ class Trainer(object):
 
                 score = self.model(data)
 
-
             loss = self.loss(score, target)
             loss_data = loss.data.item()
 
@@ -127,30 +98,31 @@ class Trainer(object):
 
             val_loss += loss_data / len(data)
 
-
             imgs = data.data.cpu()
             lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
             lbl_true = target.data.cpu()
             for img, lt, lp in zip(imgs, lbl_true, lbl_pred):
                 img, lt = self.val_loader.dataset.untransform(img, lt)
 
-                acc, acc_cls, mean_iu, fwavacc = scripts.utils.label_accuracy_score(
+                acc, acc_cls, mean_iu, fwavacc, _ = scripts.metrics.label_accuracy_score(
                         label_trues=lt, label_preds=lp, n_class=n_class)
                 metrics.append((acc, acc_cls, mean_iu, fwavacc))
                 if len(visualizations) < 9:
-                    viz = fcn.utils.visualize_segmentation(
+                    viz = scripts.visualize_segmentation(
                         lbl_pred=lp, lbl_true=lt, img=img, n_class=n_class)
                     visualizations.append(viz)
+            del imgs, lbl_pred, lbl_true
+
         metrics = np.mean(metrics, axis=0)
 
         out = osp.join(self.out, 'visualization_viz')
         if not osp.exists(out):
             os.makedirs(out)
         out_file = osp.join(out, 'epoch%04d.jpg' % self.epoch)
-        skimage.io.imsave(out_file, fcn.utils.get_tile_image(visualizations))
+        skimage.io.imsave(out_file, imgviz.tile(visualizations))
 
         val_loss /= len(self.val_loader)
-        # osp.join(self.out, 'epoch%log.csv' % self.epoch)
+
         with open(osp.join(self.out, 'log.csv'), 'a') as f:
             elapsed_time = (
                 datetime.datetime.now(pytz.timezone('Europe/Berlin')) -
@@ -202,8 +174,9 @@ class Trainer(object):
                 continue  # for resuming
             self.iteration = iteration
             # start validation after a specified number of iter-s or after all train batches
-            if self.iteration % (self.interval_validate - 1) == 0:
+            if self.iteration % self.interval_validate == 0:
                 self.validate()
+                torch.cuda.empty_cache()
             assert self.model.training
 
             if self.cuda:
@@ -232,8 +205,8 @@ class Trainer(object):
             metrics = []
             lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
             lbl_true = target.data.cpu().numpy()
-            acc, acc_cls, mean_iu, fwavacc = \
-                scripts.utils.label_accuracy_score(
+            acc, acc_cls, mean_iu, fwavacc, _ = \
+                scripts.metrics.label_accuracy_score(
                     lbl_true, lbl_pred, n_class=n_class)
             metrics.append((acc, acc_cls, mean_iu, fwavacc))
             metrics = np.mean(metrics, axis=0)
@@ -246,7 +219,7 @@ class Trainer(object):
                     metrics.tolist() + [''] * 5 + [elapsed_time]
                 log = map(str, log)
                 f.write(','.join(log) + '\n')
-            torch.cuda.empty_cache()
+
 
     def train(self):
         for epoch in tqdm.trange(self.epoch, self.max_epoch, desc='Train', ncols=80):

@@ -1,5 +1,5 @@
 import segmentation_models_pytorch as smp
-def UnetPlusPlus(n_class: int):
+def UnetPlusPlus(n_class: int = 6):
     """
     Constructs Unet with ResNet34 pretrained on imagenet.
     UNet++ introduces nested skip connections.

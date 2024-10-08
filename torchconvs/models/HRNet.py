@@ -5,7 +5,7 @@ from timm import create_model
 from torch.cuda.amp import autocast
 
 class HRNetV2Segmentation(nn.Module):
-    def __init__(self, n_class=7, pretrained=True):
+    def __init__(self, n_class=6, pretrained=True):
         super(HRNetV2Segmentation, self).__init__()
 
         # Load HRNet backbone from timm with features_only=True to get the feature maps at different resolutions

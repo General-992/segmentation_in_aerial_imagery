@@ -26,52 +26,23 @@ def patch_sample(img, mask, patch_size):
     Randomly samples patches from images, useful
     when dealing with large resolution map images.
     Each patch has a fixed size of patch_size x patch_size pixels
+
+    Input:
+    :img: ndarray[num_channels, height, width]
+    :mask: ndarray[height, width]
+    :patch_size: int
+
+    Output:
+    :image_patch: ndarray[num_channels, patch_size, patch_size]
+    :mask_patch: ndarray[patch_size, patch_size]
     """
-    _, h, w = img.size()
+    _, h, w = img.shape
     top = randint(0, h - patch_size)
     left = randint(0, w - patch_size)
 
     image_patch = img[:, top:top + patch_size, left:left + patch_size]
     mask_patch = mask[top:top + patch_size, left:left + patch_size]
     return image_patch, mask_patch
-
-def _fast_hist(label_true, label_pred, n_class):
-    """
-    computes the confusion matrix between the true and
-    predicted labels for a multi-class classification task
-    """
-    # identify only valid pixels
-    mask = (label_true >= 0) & (label_true < n_class)
-    # compute combined index for each valid pixel and count each True-Predcited Pair occurence
-    # then reshape into a confusion matrix shape n_classes * n_classes
-    hist = np.bincount(
-        n_class * label_true[mask].astype(int) +
-        label_pred[mask], minlength=n_class ** 2).reshape(n_class, n_class)
-    return hist
-
-def label_accuracy_score(label_trues, label_preds, n_class):
-    """Returns accuracy score evaluation result.
-
-      - Overall accuracy
-      - Mean accuracy
-      - Mean IU
-      - Frequency-Weighted Average Accuracy (fwavacc)
-    """
-    hist = np.zeros((n_class, n_class))
-    for lt, lp in zip(label_trues, label_preds):
-        hist += _fast_hist(lt.flatten(), lp.flatten(), n_class)
-    acc = np.diag(hist).sum() / hist.sum()
-    with np.errstate(divide='ignore', invalid='ignore'):
-        acc_cls = np.diag(hist) / hist.sum(axis=1)
-    acc_cls = np.nanmean(acc_cls)
-    with np.errstate(divide='ignore', invalid='ignore'):
-        iu = np.diag(hist) / (
-            hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist)
-        )
-    mean_iu = np.nanmean(iu)
-    freq = hist.sum(axis=1) / hist.sum()
-    fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
-    return acc, acc_cls, mean_iu, fwavacc
 
 
 def plot_image_label_classes(img, mask, class_names):
@@ -116,7 +87,7 @@ def plot_image_label_classes(img, mask, class_names):
     plt.show()
 
 
-def plot_metrics_per_month(month_metrics):
+def plot_metrics_per_month(month_metrics, model_name):
     """
     Plots bar charts showing the segmentation metrics (accuracy, class accuracy, mean IU, FWAV accuracy)
     for each month.
@@ -131,7 +102,6 @@ def plot_metrics_per_month(month_metrics):
     mean_ius = []
     fwav_accs = []
 
-    # Calculate the average for each metric for each month
     for month, metrics in month_metrics.items():
         if metrics:  # Ensure the month has metrics
             avg_metrics = np.mean(metrics, axis=0)  # Calculate mean metrics for the month
@@ -142,11 +112,9 @@ def plot_metrics_per_month(month_metrics):
             mean_ius.append(mean_iu)  # Store mean IU
             fwav_accs.append(fwavacc)  # Store FWAV accuracy
 
-    # Sort by month to ensure the x-axis is ordered correctly
     months, accuracies, accuracy_classes, mean_ius, fwav_accs = zip(
         *sorted(zip(months, accuracies, accuracy_classes, mean_ius, fwav_accs)))
 
-    # Plotting the bar charts
     metrics_names = ['Accuracy (%)', 'Class Accuracy (%)', 'Mean IU (%)', 'FWAV Accuracy (%)']
     metrics_data = [accuracies, accuracy_classes, mean_ius, fwav_accs]
 
@@ -161,11 +129,12 @@ def plot_metrics_per_month(month_metrics):
         ax.set_xticks(months)
         ax.grid(axis='y', linestyle='--', alpha=0.7)
 
+    fig.suptitle(f'Metrics per Month for {model_name}', fontsize=16)
     plt.tight_layout()
     plt.show()
 
 
-def model_select(model_name: str, n_class: int = 7) -> torch.nn.Module:
+def model_select(model_name: str, n_class: int = 6) -> torch.nn.Module:
     """
     Sets up the model
     """
@@ -173,7 +142,7 @@ def model_select(model_name: str, n_class: int = 7) -> torch.nn.Module:
         # num of trainable params = 26.079.479
         print('Start training Unet')
         model = torchconvs.models.UnetPlusPlus(n_class=n_class)
-    elif model_name.lower().startswith('deepl'):
+    elif model_name.lower().startswith('deep'):
         #  num of trainable params = 39.758.247
         print('Start training Deeplab')
         model = torchconvs.models.Deeplabv3plus_resnet(n_class=n_class)
@@ -193,3 +162,83 @@ def model_select(model_name: str, n_class: int = 7) -> torch.nn.Module:
             sum += param.numel()
     print(f'Total trainable params: {sum}, model: {model_name}')
     return model
+
+import imgviz
+import copy
+def visualize_segmentation(**kwargs):
+    """Visualize segmentation.
+
+    Parameters
+    ----------
+    img: ndarray
+        Input image to predict label.
+    lbl_true: ndarray
+        Ground truth of the label.
+    lbl_pred: ndarray
+        Label predicted.
+    n_class: int
+        Number of classes.
+    label_names: dict or list
+        Names of each label value.
+        Key or index is label_value and value is its name.
+
+    Returns
+    -------
+    img_array: ndarray
+        Visualized image.
+    """
+    img = kwargs.pop('img', None)
+    lbl_true = kwargs.pop('lbl_true', None)
+    lbl_pred = kwargs.pop('lbl_pred', None)
+    n_class = kwargs.pop('n_class', None)
+    label_names = kwargs.pop('label_names', None)
+    if kwargs:
+        raise RuntimeError(
+            'Unexpected keys in kwargs: {}'.format(kwargs.keys()))
+
+    if lbl_true is None and lbl_pred is None:
+        raise ValueError('lbl_true or lbl_pred must be not None.')
+
+    lbl_true = copy.deepcopy(lbl_true)
+    lbl_pred = copy.deepcopy(lbl_pred)
+
+    mask_unlabeled = None
+    viz_unlabeled = None
+    if lbl_true is not None:
+        mask_unlabeled = lbl_true == -1
+        lbl_true[mask_unlabeled] = 0
+        viz_unlabeled = (
+            np.random.random((lbl_true.shape[0], lbl_true.shape[1], 3)) * 255
+        ).astype(np.uint8)
+        if lbl_pred is not None:
+            lbl_pred[mask_unlabeled] = 0
+
+    vizs = []
+
+    if lbl_true is not None:
+        viz_trues = [
+            img,
+            imgviz.label2rgb(label=lbl_true, label_names=label_names),
+            imgviz.label2rgb(lbl_true, img, label_names=label_names),
+        ]
+        viz_trues[1][mask_unlabeled] = viz_unlabeled[mask_unlabeled]
+        viz_trues[2][mask_unlabeled] = viz_unlabeled[mask_unlabeled]
+        vizs.append(imgviz.tile(viz_trues, (1, 3)))
+
+    if lbl_pred is not None:
+        viz_preds = [
+            img,
+            imgviz.label2rgb(lbl_pred, label_names=label_names),
+            imgviz.label2rgb(lbl_pred, img, label_names=label_names),
+        ]
+        if mask_unlabeled is not None and viz_unlabeled is not None:
+            viz_preds[1][mask_unlabeled] = viz_unlabeled[mask_unlabeled]
+            viz_preds[2][mask_unlabeled] = viz_unlabeled[mask_unlabeled]
+        vizs.append(imgviz.tile(viz_preds, (1, 3)))
+
+    if len(vizs) == 1:
+        return vizs[0]
+    elif len(vizs) == 2:
+        return imgviz.tile(vizs, (2, 1))
+    else:
+        raise RuntimeError
