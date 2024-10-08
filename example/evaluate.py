@@ -97,8 +97,7 @@ def main():
                     lbl_pred=lp, lbl_true=lt, img=img, n_class=n_class,
                     label_names=test_loader.dataset.class_names)
                 visualizations.append(viz)
-        if batch_idx == 100:
-            a = 2
+
 
     confusion_matrix = np.sum(confusion_matrix, axis=0)
     confusion_matrix = (confusion_matrix / 1e6).astype(int)
@@ -119,7 +118,7 @@ Boundary IoU {4:.3f}'''.format(*metrics, avg_boundary_iou))
 
     plt.figure(figsize=(10, 7))
     sns.heatmap(confusion_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
-    plt.xlabel('Predicted labels')
+    plt.xlabel('Predicted labels, 1e6 pixels')
     plt.ylabel('True labels')
     plt.title('Confusion Matrix')
     plt.show()

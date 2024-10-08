@@ -19,6 +19,7 @@ idna==3.10
 imageio==2.35.1
 imgviz==1.7.5
 Jinja2==3.1.4
+joblib==1.4.2
 kiwisolver==1.4.7
 lazy_loader==0.4
 MarkupSafe==2.1.5
@@ -41,6 +42,7 @@ nvidia-nvjitlink-cu12==12.6.68
 nvidia-nvtx-cu12==12.1.105
 opencv-python-headless==4.10.0.84
 packaging==24.1
+pandas==2.2.3
 pillow==10.4.0
 pretrainedmodels==0.7.4
 protobuf==5.28.2
@@ -54,12 +56,15 @@ PyYAML==6.0.2
 requests==2.32.3
 safetensors==0.4.5
 scikit-image==0.24.0
+scikit-learn==1.5.2
 scipy==1.14.1
+seaborn==0.13.2
 segmentation-models-pytorch==0.3.4
 setuptools==75.1.0
 six==1.16.0
 soupsieve==2.6
 sympy==1.13.3
+threadpoolctl==3.5.0
 tifffile==2024.9.20
 timm==0.9.7
 torch==2.4.1
@@ -67,5 +72,6 @@ torchvision==0.19.1
 tqdm==4.66.5
 triton==3.0.0
 typing_extensions==4.12.2
+tzdata==2024.2
 urllib3==2.2.3
 wheel==0.44.0
